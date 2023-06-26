@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Twooter - Change Profile</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+    integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container">
+      <a class="navbar-brand" href="index.html">Twooter</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+        <ul class="navbar-nav">
+
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle" href="#" id="welcomeDropdown" role="button"
+              data-bs-toggle="dropdown" aria-expanded="false">
+              Welcome, <span id="userName"></span>!
+            </a>
+            <ul class="dropdown-menu" aria-labelledby="welcomeDropdown">
+              <li><a class="dropdown-item" href="changeprofile.html">Change Profile</a></li>
+              <li><a class="dropdown-item" href="changepassword.html">Change Password</a></li>
+              <li><a class="dropdown-item" id="logoutLink" href="#">Logout</a></li>
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </nav>
+  <div class="container mt-5">
+    <h1>Change Profile</h1>
+    <form id="changeProfileForm">
+      <div class="mb-3">
+        <label for="firstname" id="firstnameLabel" class="form-label">First Name</label>
+        <input type="text" class="form-control" id="firstname" name="firstname" value="">
+      </div>
+      <div class="mb-3">
+        <label for="lastname" class="form-label">Last Name</label>
+        <input type="text" class="form-control" id="lastname" name="lastname" value="">
+      </div>
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" class="form-control" id="email" name="email" value="">
+      </div>
+      <div class="mb-3">
+        <label for="birthdate" class="form-label">Birthdate</label>
+        <input type="date" class="form-control" id="birthdate" name="birthdate" value="">
+      </div>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+    <div id="message" class="mt-3"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+    crossorigin="anonymous"></script>
+  <script>
+    const endpoint = "http://localhost/kodego/kodego_db/api/";
+
+    // Fetch first name and last name
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+    }
+
+    function setCookie(name, value, days) {
+      var expires = "";
+      if (days) {
+        var date = new Date();
+        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+        expires = "; expires=" + date.toUTCString();
+      }
+      document.cookie = name + "=" + (value || "") + expires + "; path=/";
+    }
+
+    function setUserName() {
+      const firstname = getCookie('firstname');
+      const lastname = getCookie('lastname');
+      const userNameElement = document.getElementById('userName');
+      userNameElement.textContent = firstname + ' ' + lastname;
+    }
+
+
+    setUserName();
+
+
+    function displayCurrentProfileData() {
+      const firstname = getCookie('firstname');
+      const lastname = getCookie('lastname');
+      const email = getCookie('email');
+      const birthdate = getCookie('birthdate');
+
+      document.getElementById('firstname').value = firstname;
+      document.getElementById('lastname').value = lastname;
+      document.getElementById('email').value = email;
+      document.getElementById('birthdate').value = birthdate;
+    }
+
+
+    displayCurrentProfileData();
+
+
+    function updateProfile(event) {
+      event.preventDefault();
+
+      const email = document.querySelector("#email").value;
+      const firstname = document.querySelector("#firstname").value;
+      const lastname = document.querySelector("#lastname").value;
+      const birthdate = document.querySelector("#birthdate").value;
+
+
+      if (!email && !firstname && !lastname && !birthdate) {
+        alert("Please update at least one field.");
+        return;
+      }
+
+      const data = {};
+
+      if (email) {
+        data.email = email;
+      }
+
+      if (firstname) {
+        data.firstname = firstname;
+      }
+
+      if (lastname) {
+        data.lastname = lastname;
+      }
+
+      if (birthdate) {
+        data.birthdate = birthdate;
+      }
+
+      fetch(endpoint + "changeprofile.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(data)
+      })
+        .then(response => response.json())
+        .then(result => {
+          if (result.success) {
+
+            alert(result.message);
+  
+            if (email) {
+              setCookie('email', email, 30);
+            }
+            if (firstname) {
+              setCookie('firstname', firstname, 30);
+            }
+            if (lastname) {
+              setCookie('lastname', lastname, 30);
+            }   
+            if (birthdate) {
+              setCookie('birthdate', birthdate, 30);
+            }
+
+            window.location.href = "index.html";
+          } else {
+
+            alert(result.message);
+          }
+        })
+        .catch(error => {
+          console.error("Error:", error);
+        });
+    }
+
+ 
+    document.getElementById('changeProfileForm').addEventListener('submit', updateProfile);
+
+    var logoutLink = document.getElementById('logoutLink');
+    logoutLink.addEventListener('click', function (event) {
+      event.preventDefault();
+
+
+      document.cookie = 'loggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = "firstname=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "lastname=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = 'email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+      document.cookie = 'birthdate=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+
+      window.location.replace('login.html');
+    });
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twooter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-9ndCyUaIbzAi2FUVXJi0CjmCapSmO7SnpJef0486qhLnuZ2cdeRhO02iuK6FUUVM" crossorigin="anonymous">
+    <style>
+        .fixed-div {
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
+        }
+
+        .scrollable-div {
+            height: 100%;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">Twooter</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+                <ul class="navbar-nav">
+
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="index.html" id="welcomeDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            Welcome, <span id="userName"></span>!
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="welcomeDropdown">
+                            <li><a class="dropdown-item" href="changeprofile.html">Change Profile</a></li>
+                            <li><a class="dropdown-item" href="changepassword.html">Change Password</a></li>
+                            <li><a class="dropdown-item" id="logoutLink" href="#">Logout</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-6 fixed-div">
+                <h1>Create Tweet</h1>
+                <form id="createTweetForm" method="POST">
+                    <div class="form-group">
+                        <textarea class="form-control" id="tweetContent" name="content" rows="3"
+                            placeholder="What's happening?"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary mt-3 mb-3">Tweet</button>
+                </form>
+                <div id="createTweetMessage" class="mt-5"></div>
+            </div>
+            <div class="col-md-6 scrollable-div">
+                <h1>Tweets</h1>
+                <div id="tweetsContainer"></div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="deleteModalLabel">Delete Tweet</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to delete this tweet?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button id="confirmDeleteButton" type="button" class="btn btn-danger">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-geWF76RCwLtnZ8qwWowPQNguL3RmwHVBC9FhGdlKrxdiJJigb/j/68SIy3Te4Bkz"
+        crossorigin="anonymous"></script>
+    <script>
+        const endpoint = "http://localhost/kodego/kodego_db/api/";
+
+        function getCookie(name) {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(";").shift();
+        }
+
+        function setUserName() {
+            const firstname = getCookie("firstname");
+            const lastname = getCookie("lastname");
+            const userNameElement = document.getElementById("userName");
+            userNameElement.textContent = firstname + " " + lastname;
+        }
+
+        function newPost() {
+            const tweetContent = document.querySelector("#tweetContent").value;
+            const dateTweeted = new Date().toISOString();
+            fetch(endpoint + "createtweet.php", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    content: tweetContent,
+                    date_tweeted: dateTweeted,
+                    user_id: getCookie("user_id"),
+                }),
+            })
+                .then((response) => response.json())
+                .then((data) => {
+                    document.querySelector("#tweetContent").value = "";
+                    console.log(data);
+                    location.reload();
+                })
+                .catch((error) => {
+                    showErrorMessage("An error occurred. Please try again.");
+                });
+        }
+
+        function loadTweets() {
+            var tweetsContainer = document.getElementById("tweetsContainer");
+            tweetsContainer.innerHTML = "";
+
+            fetch("http://localhost/kodego/kodego_db/api/gettweets.php")
+                .then(function (response) {
+                    return response.json();
+                })
+                .then(function (data) {
+
+                    data.sort(function (a, b) {
+                        return new Date(b.date_tweeted) - new Date(a.date_tweeted);
+                    });
+
+                    data.forEach(function (tweet) {
+                        var tweetElement = document.createElement("div");
+                        tweetElement.className = "card mb-3";
+                        tweetElement.innerHTML = `
+                    <div class="card-body">
+                      <h5 class="card-title">${tweet.firstname} ${tweet.lastname}</h5>
+                      <p class="card-text">${tweet.content}</p>
+                      <p class="card-text"><small class="text-muted">${tweet.date_tweeted}</small></p>
+                      ${parseInt(tweet.user_id) === parseInt(getCookie("user_id"))
+                                ? `<button class="btn btn-danger" onclick="deleteTweet(${tweet.id})">Delete</button>`
+                                : ""
+                            }
+                    </div>
+                  `;
+
+                        tweetsContainer.appendChild(tweetElement);
+                    });
+                })
+                .catch(function (error) {
+                    showErrorMessage("An error occurred. Please try again.");
+                });
+        }
+
+        function deleteTweet(tweetID) {
+            var modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+            modal.show();
+
+            var confirmButton = document.getElementById('confirmDeleteButton');
+
+
+            confirmButton.removeEventListener('click', deleteConfirmationHandler);
+
+
+            function deleteConfirmationHandler() {
+                modal.hide();
+
+                var formData = new FormData();
+                formData.append('tweet_id', tweetID);
+                formData.append('user_id', getCookie('user_id'));
+
+                fetch('http://localhost/kodego/kodego_db/api/deletetweet.php', {
+                    method: 'POST',
+                    body: formData,
+                })
+                    .then(function (response) {
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        if (data.status === 'success') {
+                            showSuccessMessage(data.message);
+                            loadTweets(true); // Reload tweets
+                        } else {
+                            showErrorMessage(data.message);
+                        }
+                    })
+                    .catch(function (error) {
+                        showErrorMessage('An error occurred. Please try again. Error: ' + error);
+                    });
+            }
+
+
+            confirmButton.addEventListener('click', deleteConfirmationHandler);
+        }
+
+        function showSuccessMessage(message) {
+            var successMessageContainer = document.getElementById("createTweetMessage");
+            successMessageContainer.className = "alert alert-success";
+            successMessageContainer.textContent = message;
+        }
+        function showErrorMessage(message) {
+            var errorMessageContainer = document.getElementById("createTweetMessage");
+            errorMessageContainer.className = "alert alert-danger";
+            errorMessageContainer.textContent = message;
+        }
+
+        window.addEventListener("DOMContentLoaded", function () {
+            setUserName();
+            loadTweets();
+
+            var createTweetForm = document.getElementById("createTweetForm");
+            createTweetForm.addEventListener("submit", function (event) {
+                event.preventDefault();
+                newPost();
+            });
+
+
+            var logoutLink = document.getElementById('logoutLink');
+            logoutLink.addEventListener('click', function (event) {
+                event.preventDefault();
+
+
+                document.cookie = 'loggedIn=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                document.cookie = 'user_id=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                document.cookie = "firstname=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                document.cookie = "lastname=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                document.cookie = 'email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                document.cookie = 'birthdate=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+                window.location.replace('login.html');
+            });
+
+
+            function getCookie(name) {
+                var value = '; ' + document.cookie;
+                var parts = value.split('; ' + name + '=');
+                if (parts.length === 2) return parts.pop().split(';').shift();
+                return '';
+            }
+
+        });
+    </script>
+
+</body>
+
+</html>
